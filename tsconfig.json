@@ -9,7 +9,9 @@
     "declaration": true,
     "sourceMap": true,
     "typeRoots": ["./node_modules/@types"],
-    "allowJs": true
+    "allowJs": true,
+    "noImplicitReturns": true,
+    "noImplicitAny": true
   },
   "exclude": [
     "node_modules",

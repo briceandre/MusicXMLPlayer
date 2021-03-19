@@ -8,6 +8,7 @@ module.exports = merge(common,
    {
       filename: 'music-xml-player.min.js',
       path: path.resolve(__dirname, 'dist'),
+      libraryTarget: 'umd',
    },
    mode: 'production',
 });

@@ -1,23 +1,18 @@
-const path = require('path');
-
-  module.exports = {
-    entry: './src/index.ts',
-    
-    devtool: 'source-map',
-    module: {
+module.exports =
+{
+   entry: './src/index.ts',
+   devtool: 'source-map',
+   module: {
       rules: [
-        {
-          test: /\.tsx?$/,
-          use: 'ts-loader',
-          exclude: /node_modules/,
-        },
+         {
+            test: /\.tsx?$/,
+            use: 'ts-loader',
+            exclude: /node_modules/,
+         },
       ],
-    },
-    resolve: {
+   },
+   resolve: 
+   {
       extensions: [ '.tsx', '.ts', '.js' ],
-    },
-    output: {
-      filename: 'music-xml-player.min.js',
-      path: path.resolve(__dirname, 'dist'),
-    },
-  };
+   },
+};

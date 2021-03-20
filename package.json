@@ -4,7 +4,7 @@
   "description": "An open source JavaScript engine for displaying MusicXML based on VexFlow.",
   "main": "dist/music-xml-player.min.js",
   "scripts": {
-    "build-cpp": "npx emsdk install ^1.40.1 && npx emsdk activate ^1.40.1 && npx emcc -s SINGLE_FILE=1 -s EXPORT_ES6=1 -s MODULARIZE=1 -s EXPORT_NAME=\"'TotoModule'\" -s ALLOW_MEMORY_GROWTH=1 -s EXPORTED_FUNCTIONS=\"['_toto']\"  -s EXTRA_EXPORTED_RUNTIME_METHODS=[\"cwrap\"] -O3 --bind -o worker/SynthetiserModule.js cpp/main.cpp",
+    "build-cpp": "npx emsdk install ^1.40.1 && npx emsdk activate ^1.40.1 && npx emcc -s SINGLE_FILE=1 -s EXPORT_ES6=1 -s MODULARIZE=1 -s EXPORT_NAME=\"'SynthetiserModule'\" -s ALLOW_MEMORY_GROWTH=1 -s EXPORTED_FUNCTIONS=['_LoadNote','_GetReplayedInstruments','_AddReplayInstrument','_ClearAll','_SetReplayedInstrumentVolume','_SetReplayedInstrumentInstrument','_TriggerNote','_ReleaseNote','_ReleaseAllNotes','_GetNotesTriggered','_SampleData']  -s EXTRA_EXPORTED_RUNTIME_METHODS=[\"cwrap\"] -O3 --bind -o worker/SynthetiserModule.js cpp/main.cpp",
     "build": "webpack --progress --config webpack.prod.js",
     "build-dev": "webpack --progress --config webpack.dev.js",
     "build-worker-dev": "webpack --progress --config webpack.wdev.js"
@@ -18,7 +18,8 @@
     "webpack-merge": "^4.1.2"
   },
   "dependencies": {
-    "jszip": "3.4.0"
+    "jszip": "3.4.0",
+    "note-parser": "^2.0.1"
   },
   "browser": {
     "fs": false,

@@ -4,12 +4,13 @@
   "description": "An open source JavaScript engine for displaying MusicXML based on VexFlow.",
   "main": "dist/music-xml-player.min.js",
   "scripts": {
-    "build-cpp": "npx emsdk install 2.0.14 && npx emsdk activate 2.0.14 && npx emsdk run emcc -s EXPORT_NAME=\"'TotoModule'\" -s ALLOW_MEMORY_GROWTH=1 -s EXPORTED_FUNCTIONS=\"['_toto']\"  -s EXTRA_EXPORTED_RUNTIME_METHODS=[\"cwrap\"] -O3 --bind -o SynthetiserModule.js main.cpp",
+    "build-cpp": "npx emsdk install ^1.40.1 && npx emsdk activate ^1.40.1 && npx emcc -s EXPORT_NAME=\"'TotoModule'\" -s ALLOW_MEMORY_GROWTH=1 -s EXPORTED_FUNCTIONS=\"['_toto']\"  -s EXTRA_EXPORTED_RUNTIME_METHODS=[\"cwrap\"] -O3 --bind -o worker/SynthetiserModule.js cpp/main.cpp",
     "build": "webpack --progress --config webpack.prod.js",
-    "build-dev": "webpack --progress --config webpack.dev.js"
+    "build-dev": "webpack --progress --config webpack.dev.js",
+    "build-worker-dev": "webpack --progress --config webpack.wdev.js"
   },
   "devDependencies": {
-    "emscripten-sdk": "^2.0.14-1",
+    "emscripten-sdk": "^1.40.1-3",
     "ts-loader": "^8.0.18",
     "typescript": "^4.2.3",
     "webpack": "^5.4.0",

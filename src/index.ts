@@ -3,7 +3,7 @@
 export class Toto
 {
    private mode: boolean
-   private name;
+   private name: string;
    
    constructor(n: string, b: boolean)
    {
@@ -19,7 +19,20 @@ export class Toto
       }
       else
       {
-         return 1;
+         return "Bye"
       }
    }
 }
+
+/* Start the worker */
+const worker = new Worker('/MusicXMLPlayer/dist/music-xml-player-worker.js');
+
+/* Wait for reception of a message */
+worker.onmessage = (event) =>
+{
+   /* Declare data with proper cast */
+   const data = event.data as import('../worker').HelloMessage;
+
+   /* Simply display it */
+   console.log('Received in main thread : '+data.hello);
+};

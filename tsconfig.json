@@ -11,7 +11,8 @@
     "typeRoots": ["./node_modules/@types"],
     "allowJs": true,
     "noImplicitReturns": true,
-    "noImplicitAny": true
+    "noImplicitAny": true,
+    "lib": ["esnext", "webworker"]
   },
   "exclude": [
     "node_modules",

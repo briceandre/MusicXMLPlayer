@@ -5,10 +5,18 @@ declare var self: DedicatedWorkerGlobalScope;
 export {};
 
 /* Declare type of data exchanged with main thread */
-const helloMessage = {
-  hello: 'Hello world from my worker !!!!',
+var helloMessage = {
+  hello: '',
 };
 export type HelloMessage = typeof helloMessage;
 
-/* Main part : we simply send data */
-self.postMessage(helloMessage);
+import TotoModule from './SynthetiserModule.js';
+
+TotoModule().then(function(module: any)
+{
+   var toto = module.cwrap('toto', 'number', ['number', 'number']);
+
+   helloMessage.hello = 'Hello world from my worker !!!! Result of 3x4='+toto(3,4);
+   self.postMessage(helloMessage);
+});
+

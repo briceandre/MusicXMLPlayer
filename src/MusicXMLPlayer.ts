@@ -312,7 +312,6 @@ export class MusicXMLPlayer
       }
       else
       {
-         if (!this.playing_info) this.resetPlayingInfo();
          this.is_playing = true;
       }
    }
@@ -332,7 +331,7 @@ export class MusicXMLPlayer
    {
       this.synth.stop();
       this.is_playing = false;
-      this.playing_info = [];
+      this.resetPlayingInfo();
       this.next_measure_to_send = 0;
    }
    
@@ -594,7 +593,7 @@ export class MusicXMLPlayer
       {
          /* stop the play */
          this.is_playing = false;
-         this.playing_info = [];
+         this.resetPlayingInfo();
          this.next_measure_to_send = 0;
          
          /* Send the callback */

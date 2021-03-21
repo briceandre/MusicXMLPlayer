@@ -46,3 +46,18 @@ Current implementation has limited features. Will be improved in future releases
 
 Do not hesitate to contribute ! Patches are welcome !
 
+## License
+
+This software is released under the MIT license
+
+## Credits
+
+This project uses the following resources :
+
+- require.js : https://github.com/requirejs/requirejs/blob/master/LICENSE
+- jszip : https://raw.github.com/Stuk/jszip/master/LICENSE.markdown
+- NoteParser : https://www.npmjs.com/package/noteparser
+
+The library needs SoundFont samples to work properly. By default, it uses Musyng Kite Soundfont. This behavior can be changed by providing another download URL to the constructor of MusicXMLPlayer :
+
+- https://github.com/gleitz/midi-js-soundfonts

@@ -1,14 +1,11 @@
-// @ts-ignore
-import NoteParser from "note-parser";
-// @ts-ignore
-import requirejs from "requirejs";
-
 declare global {
   interface Window {
     webkitAudioContext: any;
     MIDI: any;
   }
   function requirejs(arg0: string[], arg1: Function): void
+  function NoteParser(): any
+  function requirejs(arg_: string[], arg1: () => void): void
 }
 
 export class Synthetizer

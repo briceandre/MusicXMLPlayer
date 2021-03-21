@@ -12,7 +12,7 @@
     "allowJs": true,
     "noImplicitReturns": true,
     "noImplicitAny": true,
-    "lib": ["esnext", "webworker"]
+    "lib": ["esnext", "webworker", "dom"]
   },
   "exclude": [
     "node_modules",

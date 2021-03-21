@@ -1,6 +1,6 @@
 module.exports =
 {
-   entry: './src/index.ts',
+   entry: ['./src/Synthetizer.ts', './src/MusicXMLPlayer.ts'],
    devtool: 'source-map',
    module: {
       rules: [

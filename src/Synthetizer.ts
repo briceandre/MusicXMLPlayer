@@ -120,7 +120,7 @@ export class Synthetizer
       this.onLoadPromise.then(callback);
    }
    
-   loadInstruments(instruments: number[], used_notes: string[], callback: () => void): void
+   loadInstruments(instruments: number[], used_notes: {[index: number]:{[index: string]:boolean}}, callback: () => void): void
    {
       /* Check that we are initialised */
       if (!this.is_loaded) throw new Error('Synthetiser not initialised. Please call waitReady prior to any other call !');
@@ -148,7 +148,7 @@ export class Synthetizer
       requirejs(instruments_url, this.OnLoadInstruments.bind(this, instruments_to_load, used_notes, callback));
    }
    
-   private OnLoadInstruments(instruments_to_load: number[], used_notes: string[], callback: () => void) 
+   private OnLoadInstruments(instruments_to_load: number[], used_notes: {[index: number]:{[index: string]:boolean}}, callback: () => void) 
    {
       var promises = [];
       

@@ -1,13 +1,14 @@
 import {Synthetizer} from './Synthetizer.ts';
 
-declare class JSZip {
+declare class JSZip 
+{
   constructor();
   loadAsync(arg: string): any;
 }
+
 export class MusicXMLPlayer
 {
    private synth: Synthetizer;
-   private is_running: boolean;
    private data: any;
    
    private tempo: number;
@@ -27,11 +28,13 @@ export class MusicXMLPlayer
    
    private on_play_measure: (arg0: number) => void;
    private on_stop: () => void;
-
-   constructor(sample_base_url: string="https://gleitz.github.io/midi-js-soundfonts/MusyngKite/")
+   
+   private onLoadPromise: any;
+   private onLoadPromiseResolve: any;
+   
+   constructor(mxl: string, sample_base_url: string="https://gleitz.github.io/midi-js-soundfonts/MusyngKite/")
    {
       this.synth = new Synthetizer(sample_base_url);
-      this.is_running = false;
       this.data = false; 
 
       this.tempo = 80;
@@ -46,10 +49,18 @@ export class MusicXMLPlayer
       this.selected_instruments = [];
       this.selected_replayed_instruments = [];
       
-      this.on_cyclic_callback = setTimeout(this.OnCyclic.bind(this), 100);
+      this.on_cyclic_callback = setInterval(this.OnCyclic.bind(this), 100);
       
       this.on_play_measure = function(a: number){}
       this.on_stop = function() {}
+
+      this.onLoadPromise = new Promise(this.OnLoadPromiseInitialised.bind(this, mxl));
+   }
+   
+   private OnLoadPromiseInitialised(mxl: string, resolve: () => void): void
+   {
+      this.onLoadPromiseResolve = resolve;
+      this.synth.waitReady(this.loadNotes.bind(this, mxl))
    }
    
    cleanup(): void
@@ -58,7 +69,7 @@ export class MusicXMLPlayer
       {
          this.is_cleaned_up = true;
          
-         clearTimeout(this.on_cyclic_callback);
+         clearInterval(this.on_cyclic_callback);
          
          this.is_loaded = false;
          this.is_playing = false;
@@ -74,7 +85,7 @@ export class MusicXMLPlayer
    
    waitReady(callback: () => void): void
    {
-      this.synth.waitReady(callback)
+      this.onLoadPromise.then(callback);
    }
    
    static getAvailableInstruments(): string[]
@@ -235,46 +246,36 @@ export class MusicXMLPlayer
       return instruments;
    }
    
-   private load(mxl: string, _callback: () => void): void
+   private OnNotesLoaded(data: any)
    {
-      var callback = _callback;
+      this.data = data;
       
-      /* Check if we are stopped */
-      if (this.is_running)
+      this.selected_instruments = [];
+      this.selected_replayed_instruments = [];
+      var tmp = this.getInstruments();
+      for (var i = 0; i < tmp.length; i++)
       {
-         this.stop();
+         this.selected_instruments.push(tmp[i].instrument_id);
       }
       
-      /* perform the load */
-      this.loadNotes(mxl, function(data: any)
-      {
-         this.data = data;
-         
-         this.selected_instruments = [];
-         this.selected_replayed_instruments = [];
-         var tmp = this.getInstruments();
-         for (var i = 0; i < tmp.length; i++)
-         {
-            this.selected_instruments.push(tmp[i].instrument_id);
-         }
-         
-         /* Ensure we have instruments */
-         this.synth.ClearAll();
-         this.loadInstruments(this.selected_instruments, function()
-         {
-            /* Push replayed instruments */
-            this.selected_replayed_instruments = [];
-            for (var i = 0; i < tmp.length; i++)
-            {
-               this.synth.AddReplayedInstrument(tmp[i].instrument_id).then(function(r: number){this.selected_replayed_instruments.push(r)}.bind(this))
-            }
-
-            this.getNotes();
-            callback();
-         }.bind(this));
-      }.bind(this))
+      /* Ensure we have instruments */
+      this.synth.ClearAll();
+      this.loadInstruments(this.selected_instruments, this.OnInstrumentsLoded.bind(this, tmp));
    }
+   
+   private OnInstrumentsLoded(instruments: {name: string, instrument_id: number}[]): void
+   {
+      /* Push replayed instruments */
+      this.selected_replayed_instruments = [];
+      for (var i = 0; i < instruments.length; i++)
+      {
+         this.synth.AddReplayedInstrument(instruments[i].instrument_id).then(function(r: number){this.selected_replayed_instruments.push(r)}.bind(this))
+      }
 
+      /* Notify end of load */
+      this.onLoadPromiseResolve();
+   }
+   
    setTempo(t: number): void
    {
       this.tempo = t;
@@ -359,7 +360,6 @@ export class MusicXMLPlayer
    
    private PlayVoice(voice: number, instrument: number, note_data: any, instrument_id: number, measure_id: number): number
    {
-      
       let measure = note_data[instrument_id].measure[measure_id];
 
       var current_note_start = 0;
@@ -554,6 +554,11 @@ export class MusicXMLPlayer
       return measure_duration;
    }
    
+   private TriggerOnMeasure(measure_id: number): void
+   {
+      this.on_play_measure(measure_id);
+   }
+   
    private PlayMeasure(): void
    {
       /* play the instruments */
@@ -569,7 +574,6 @@ export class MusicXMLPlayer
          {
             measure_duration = d
          }
-         id++
       }
       
       /* Confirm the sending of the measure */
@@ -577,7 +581,7 @@ export class MusicXMLPlayer
       
       /* Send callback */
       var measure_played = this.next_measure_to_send+1;
-      setTimeout(function(){this.on_play_measure(measure_played);}.bind(this), (measure_start_time-this.synth.now())*1000);
+      setTimeout(this.TriggerOnMeasure.bind(this, measure_played), (measure_start_time-this.synth.now())*1000);
 
       /* Check if we still have something to play */
       if ((this.next_measure_to_send < (this.data['score-partwise'][0].part[0].measure.length-1)))
@@ -628,15 +632,18 @@ export class MusicXMLPlayer
       if (this.is_playing && 
           this.synth.checkShallFeed())
       {
-         console.log('Polling   ->GO');
          this.PlayMeasure();
       }
    }
    
-   private loadNotes(mxl: string, _callback: (arg0: any) => void): void
+   private loadNotes(mxl: string): void
    {
-      var callback = _callback;
-      
+      /* Extract XML */
+      this.extractXML(mxl)
+   }
+   
+   private OnXMLExtracted(xml: string): void
+   {
       var attributes_filter:{[index: string]:{[index: string]:string}} = 
          {'part': {'id': 'id'},
           'tie': {'type': 'type'}}
@@ -754,38 +761,31 @@ export class MusicXMLPlayer
          return obj;
       }
       
-      /* Extract XML */
-      this.extractXML(mxl, function(xml: string)
-      {
-         /* Perform a filtered conversion */
-         var json_data = xmlToJson(new DOMParser().parseFromString(xml, 'text/xml'), 'root');
-         
-         /* Extract parts */
-         callback(json_data);
-      }.bind(this))
+      /* Perform a filtered conversion */
+      var json_data = xmlToJson(new DOMParser().parseFromString(xml, 'text/xml'), 'root');
+      
+      /* Extract parts */
+      this.OnNotesLoaded(json_data);
    }
    
-   private extractXML(mxl: string, _callback: (xml: string) => void): void
+   private OnXMLManifestLoaded(zip: any, data: string): void
    {
-      var callback = _callback;
-      
+      /* Retrieve main file */  
+      var main_file = (new DOMParser()).parseFromString(data, "text/xml").getElementsByTagName('rootfile')[0].getAttribute('full-path') ;
+
+      /* Extract it */
+      zip.file(main_file).async("string").then(this.OnXMLExtracted.bind(this));
+   }
+   
+   private OnXMLLoaded(zip: any): void
+   {
+      zip.file("META-INF/container.xml").async("string").then(this.OnXMLManifestLoaded.bind(this, zip));
+   }
+   
+   private extractXML(mxl: string): void
+   {
       /* Unzip */
       var z = new JSZip();
-      z.loadAsync(mxl)
-      .then(function(zip: any)
-      {
-         /* Read manifest */
-         zip.file("META-INF/container.xml").async("string").then(function(data: string)
-         {
-            /* Retrieve main file */  
-            var main_file = (new DOMParser()).parseFromString(data, "text/xml").getElementsByTagName('rootfile')[0].getAttribute('full-path') ;
-
-            /* Extract it */
-            zip.file(main_file).async("string").then(function(data: string)
-            {
-               callback(data);
-            });
-         });
-      });
+      z.loadAsync(mxl).then(this.OnXMLLoaded.bind(this));
    }
 }

@@ -8,9 +8,6 @@ declare global {
     webkitAudioContext: any;
     MIDI: any;
   }
-}
-
-declare global {
   function requirejs(arg0: string[], arg1: Function): void
 }
 
@@ -63,27 +60,7 @@ export class Synthetizer
       
       /* Initialise workers */
       this.worker = new Worker('/MusicXMLPlayer/dist/music-xml-player-worker.js');
-      this.onLoadPromise = new Promise(function(resolve: (value: boolean) => void)
-      {
-         this.worker.onmessage = function(e: any)
-         {
-            if (e.data.type == 'initialised')
-            {
-               this.is_loaded = true;
-               resolve(true);
-            }
-            else if (this.promises.hasOwnProperty(e.data.promise))
-            {
-               this.promises[e.data.promise](e.data.result);
-               delete this.promises[e.data.promise];
-            }
-            else
-            {
-               console.log('Main thread : unknown command...');
-               console.log(e)
-            }
-         }.bind(this)
-      }.bind(this));
+      this.onLoadPromise = new Promise(this.OnWorkerInitialised.bind(this));
    }
    
    cleanup(): void
@@ -97,12 +74,31 @@ export class Synthetizer
       }
    }
    
+   private OnWorkerInitialised(resolve: (value: boolean) => void)
+   {
+      this.worker.onmessage = this.ManageWorkerMessage.bind(this, resolve);
+   }
+   
+   private ManageWorkerMessage(resolve: (value: boolean) => void, e: any)
+   {
+      if (e.data.type == 'initialised')
+      {
+         this.is_loaded = true;
+         resolve(true);
+      }
+      else if (this.promises.hasOwnProperty(e.data.promise))
+      {
+         this.promises[e.data.promise](e.data.result);
+         delete this.promises[e.data.promise];
+      }
+   }
+   
    waitReady(callback: Function): void
    {
       this.onLoadPromise.then(callback);
    }
    
-   loadInstruments(instruments: number[], used_notes: string[], callback: Function): void
+   loadInstruments(instruments: number[], used_notes: string[], callback: () => void): void
    {
       /* Check that we are initialised */
       if (!this.is_loaded) throw new Error('Synthetiser not initialised. Please call waitReady prior to any other call !');
@@ -127,19 +123,10 @@ export class Synthetizer
       }
       
       /* Format urls */
-      requirejs(instruments_url, this.toto2.bind(this, instruments_to_load, used_notes, callback));
+      requirejs(instruments_url, this.OnLoadInstruments.bind(this, instruments_to_load, used_notes, callback));
    }
    
-   private toto3(i: number, note: string, d: any)
-   {
-      var channel_1: any = d.getChannelData(channel_1, 0);
-      var channel_2: any = d.getChannelData(channel_2, 1);
-   
-      return this.internal_load_note(i, this.note_parser.convert(note), d.sampleRate, channel_1, channel_2);
-   }
-   
-   
-   private toto2(instruments_to_load: number[], used_notes: string[], callback: Function) 
+   private OnLoadInstruments(instruments_to_load: number[], used_notes: string[], callback: () => void) 
    {
       var promises = [];
       
@@ -147,32 +134,29 @@ export class Synthetizer
       window.MIDI.parsed = window.MIDI.parsed || {};
       
       /* Perform full conversion of inputs */
-      for (let i of instruments_to_load)
+      for (let instrument of instruments_to_load)
       {
          var filtered_notes = [];
-         var tmp = Object.keys(used_notes[i])
+         var tmp = Object.keys(used_notes[instrument])
          for (const t of tmp)
          {
             filtered_notes.push(this.note_parser.convert(t));
          }
 
-         this.instruments.push(i);
-         window.MIDI.parsed[this.midiInstrumentsNames[i]] = window.MIDI.parsed[this.midiInstrumentsNames[i]] || {};
+         this.instruments.push(instrument);
+         window.MIDI.parsed[this.midiInstrumentsNames[instrument]] = window.MIDI.parsed[this.midiInstrumentsNames[instrument]] || {};
          
-         for (let note in window.MIDI.Soundfont[this.midiInstrumentsNames[i]])
+         for (let note in window.MIDI.Soundfont[this.midiInstrumentsNames[instrument]])
          {
             if (filtered_notes.includes(this.note_parser.convert(note)))
             {
-               promises.push(this.loadInstrumentsParser(window.MIDI.Soundfont[this.midiInstrumentsNames[i]][note], this.toto3.bind(this, i, note)))
+               promises.push(this.OnLoadNote(window.MIDI.Soundfont[this.midiInstrumentsNames[instrument]][note], instrument, note))
             }
          }
       }
 
       /* Wait for all promises to resolve */
-      Promise.all(promises).then(function()
-      {
-         callback();
-      }.bind(this))
+      Promise.all(promises).then(callback);
    }
    
    AddReplayedInstrument(instrument_id: number): Promise<number>
@@ -283,18 +267,17 @@ export class Synthetizer
       return this.context.currentTime;
    }
 
-   private invokeWorkerCommand(_name: string, _args: any): Promise<number>
+   private invokeWorkerCommand(name: string, args: any): Promise<number>
    {
-      var name = _name;
-      var args = _args;
-      return new Promise<number>(function(resolve: (value: number) => void)
-      {
-         this.last_promise_id++;
-         this.promises[this.last_promise_id] = resolve;
-         this.worker.postMessage({'promise': this.last_promise_id,
-                                  'type': name,
-                                  'args': args});
-      }.bind(this))
+      return new Promise<number>(this.InvokeWorkerCommandPromise.bind(this, name, args))
+   }
+   private InvokeWorkerCommandPromise(name: string, args: any, resolve: (value: number) => void): void
+   {
+      this.last_promise_id++;
+      this.promises[this.last_promise_id] = resolve;
+      this.worker.postMessage({'promise': this.last_promise_id,
+                               'type': name,
+                               'args': args});
    }
    
    private load_note(instrument_id: number, note: string, sample_rate: number, length: number, channel_1_data: Float32Array, channel_2_data: Float32Array) {return this.invokeWorkerCommand('load_note', [instrument_id, note, sample_rate, length, channel_1_data, channel_2_data])}
@@ -445,23 +428,27 @@ export class Synthetizer
       var binary_string = window.atob(base64.slice(base64.lastIndexOf(',') + 1));
       var len = binary_string.length;
       var bytes = new Uint8Array(len);
-      for (var i = 0; i < len; i++) {
-          bytes[i] = binary_string.charCodeAt(i);
+      for (var i = 0; i < len; i++)
+      {
+         bytes[i] = binary_string.charCodeAt(i);
       }
       return bytes.buffer;
    }
    
-   private toto5(b64_data: string, clbk: (arg0: AudioBuffer) => void, resolve: () => void)
+   private LoadNote(instrument: number, note: string, resolve: () => void, d: AudioBuffer)
    {
-      this.context.decodeAudioData(this.base64ToArrayBuffer(b64_data), function(d: AudioBuffer)
-      {
-         clbk(d);
-         resolve();
-      });
+      var channel_1: Float32Array = d.getChannelData(0);
+      var channel_2: Float32Array = d.getChannelData(1);
+   
+      this.internal_load_note(instrument, this.note_parser.convert(note), d.sampleRate, channel_1, channel_2).then(resolve)
    }
-   private loadInstrumentsParser(b64_data: string, clbk: (arg0: AudioBuffer) => void)
+   private OnDecodeNote(b64_data: string,  instrument: number, note: string, resolve: () => void)
    {
-      return new Promise(this.toto5.bind(this, b64_data, clbk));
+      this.context.decodeAudioData(this.base64ToArrayBuffer(b64_data), this.LoadNote.bind(this, instrument, note, resolve));
+   }
+   private OnLoadNote(b64_data: string, instrument: number, note: string)
+   {
+      return new Promise(this.OnDecodeNote.bind(this, b64_data, instrument, note));
    }
    
    private internal_load_note(instrument_id: number, note: string, sample_rate: number, channel_1_data: Float32Array, channel_2_data: Float32Array)
@@ -478,6 +465,33 @@ export class Synthetizer
       return this.SampleDataToWorker(nb_samples);
    }
    
+   private SendDataToSoundCard(data: [Float32Array,Float32Array]): void
+   {
+      var buffer = this.context.createBuffer(2, this.duration*this.context.sampleRate, this.context.sampleRate);
+      
+      this.shall_feed = true;
+      
+      /* feed in buffer */
+      var b1 = buffer.getChannelData(0);
+      var b2 = buffer.getChannelData(1);
+      
+      for (var i = 0; i < buffer.length; i++)
+      {
+         b1[i] = data[0][i];
+         b2[i] = data[1][i];
+      }
+      
+      /* Send it to sound card */
+      var source = this.context.createBufferSource();
+      source.buffer = buffer;
+      source.connect(this.context.destination);
+      source.start(this.last_sent_finish_time);
+      
+      /* Update local time */
+      this.last_sent_finish_time += this.duration;
+      this.in_sending = false;
+   }
+   
    private send_next_sample()
    {
       console.log('send next sample')
@@ -487,61 +501,13 @@ export class Synthetizer
       /* Check if we have data */
       if (this.feeded)
       {
-         console.log('   -> real sample')
          /* Sample next duration */
-         console.log('Request data...')
-         this.SampleData(this.duration).then(function(data: [Float32Array,Float32Array])
-         {
-            console.log('Data received -> push in soundcard');
-            var buffer = this.context.createBuffer(2, this.duration*this.context.sampleRate, this.context.sampleRate);
-            
-            this.shall_feed = true;
-            
-            /* feed in buffer */
-            var b1 = buffer.getChannelData(0);
-            var b2 = buffer.getChannelData(1);
-            
-            for (var i = 0; i < buffer.length; i++)
-            {
-               b1[i] = data[0][i];
-               b2[i] = data[1][i];
-            }
-            
-            /* Send it to sound card */
-            var source = this.context.createBufferSource();
-            source.buffer = buffer;
-            source.connect(this.context.destination);
-            source.start(this.last_sent_finish_time);
-            
-            /* Update local time */
-            this.last_sent_finish_time += this.duration;
-            this.in_sending = false;
-         }.bind(this))
+         this.SampleData(this.duration).then(this.SendDataToSoundCard.bind(this))
       }
       else
       {
-         console.log('   -> blank')
-         var buffer = this.context.createBuffer(2, this.duration*this.context.sampleRate, this.context.sampleRate);
-         
-         /* set blank duration */
-         var b1 = buffer.getChannelData(0);
-         var b2 = buffer.getChannelData(1);
-         
-         for (var i = 0; i < buffer.length; i++)
-         {
-            b1[i] = 0;
-            b2[i] = 0;
-         }
-         
-         /* Send it to sound card */
-         var source = this.context.createBufferSource();
-         source.buffer = buffer;
-         source.connect(this.context.destination);
-         source.start(this.last_sent_finish_time);
-         
-         /* Update local time */
-         this.last_sent_finish_time += this.duration;
-         this.in_sending = false;
+         this.SendDataToSoundCard([new Float32Array(this.duration*this.context.sampleRate),
+                                   new Float32Array(this.duration*this.context.sampleRate)]);
       }
    }
    

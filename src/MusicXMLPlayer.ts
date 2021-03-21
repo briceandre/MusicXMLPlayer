@@ -6,6 +6,7 @@ declare class JSZip
   loadAsync(arg: string): any;
 }
 
+console.log('loading MusicXMLPlayer')
 export class MusicXMLPlayer
 {
    private synth: Synthetizer;
@@ -29,7 +30,7 @@ export class MusicXMLPlayer
    private on_play_measure: (arg0: number) => void;
    private on_stop: () => void;
    
-   private onLoadPromise: any;
+   private onLoadPromise: Promise<void>;
    private onLoadPromiseResolve: any;
    
    constructor(mxl: string, sample_base_url: string="https://gleitz.github.io/midi-js-soundfonts/MusyngKite/")
@@ -83,9 +84,9 @@ export class MusicXMLPlayer
       }
    }
    
-   waitReady(callback: () => void): void
+   waitReady(): Promise<void>
    {
-      this.onLoadPromise.then(callback);
+      return this.onLoadPromise;
    }
    
    static getAvailableInstruments(): string[]

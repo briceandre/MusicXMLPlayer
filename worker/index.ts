@@ -83,7 +83,7 @@ function initialise(_wasm_module: any)
             'promise': e.data.promise,
             'result': result});
       }
-      else if (this.hasOwnProperty('_'+e.data.type))
+      else if (wasm_functions.hasOwnProperty(e.data.type))
       {
          var result: any = wasm_functions[<string>e.data.type].apply(self, e.data.args);
          self.postMessage({'type': e.data.type,
@@ -99,7 +99,5 @@ function initialise(_wasm_module: any)
 
 SynthetiserModule().then(function(wasm_module: any)
 {
-   console.log('Worker : wasm_module loaded')
    initialise(wasm_module)
-   console.log('Worker : initialised')
 });

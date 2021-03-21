@@ -32,8 +32,31 @@ export class Synthetizer
    
    private onLoadPromise: any;
    
-   constructor()
+   private sample_base_url: string;
+   
+   constructor(sample_base_url: string="https://gleitz.github.io/midi-js-soundfonts/MusyngKite/")
    {
+      /* Determine location of worker */   
+      var worker_path = 'music-xml-player-worker.min.js';
+      var scripts = document.getElementsByTagName("script");
+      for (var i = 0; i < scripts.length; i++)
+      {
+         var src = scripts[i].getAttribute('src');
+         if (src.indexOf("?") >= 0)
+         {
+            src = src.substring(0, src.indexOf("?")-1);
+         }
+         
+         if (src.endsWith('music-xml-player.js'))
+         {
+            worker_path = src.slice(0, src.lastIndexOf('/'))+'/music-xml-player-worker.js';
+         }
+         else if (src.endsWith('music-xml-player.min.js'))
+         {
+            worker_path = src.slice(0, src.lastIndexOf('/'))+'/music-xml-player-worker.min.js';
+         }
+      }
+
       /* Set internal data  */
       this.is_loaded = false;
       this.is_cleanup = false;
@@ -50,13 +73,15 @@ export class Synthetizer
 
       this.feeded = false;
       this.duration = 0.5;
+      
+      this.sample_base_url = sample_base_url;
 
       /* Set queue of promises under wait */
       this.last_promise_id = 0;
       this.promises = {};
       
       /* Initialise workers */
-      this.worker = new Worker('/MusicXMLPlayer/dist/music-xml-player-worker.js');
+      this.worker = new Worker(worker_path);
       this.onLoadPromise = new Promise(this.OnWorkerInitialised.bind(this));
    }
    
@@ -108,7 +133,7 @@ export class Synthetizer
          if ((!this.instruments.includes(i)) && (!instruments_to_load.includes(i)))
          {
             instruments_to_load.push(i);
-            instruments_url.push("/samples/"+this.midiInstrumentsNames[i]+"-mp3.js")
+            instruments_url.push(this.sample_base_url+this.midiInstrumentsNames[i]+"-mp3.js")
          }
       }
       
@@ -491,10 +516,8 @@ export class Synthetizer
    
    private send_next_sample()
    {
-      console.log('send next sample')
       this.in_sending = true;
       
-      console.log('Send next sample...')
       /* Check if we have data */
       if (this.feeded)
       {

@@ -42,18 +42,21 @@ export class Synthetizer
       for (var i = 0; i < scripts.length; i++)
       {
          var src = scripts[i].getAttribute('src');
-         if (src.indexOf("?") >= 0)
+         if (src)
          {
-            src = src.substring(0, src.indexOf("?"));
-         }
-
-         if (src.endsWith('music-xml-player.js'))
-         {
-            worker_path = src.slice(0, src.lastIndexOf('/'))+'/music-xml-player-worker.js';
-         }
-         else if (src.endsWith('music-xml-player.min.js'))
-         {
-            worker_path = src.slice(0, src.lastIndexOf('/'))+'/music-xml-player-worker.min.js';
+            if (src.indexOf("?") >= 0)
+            {
+               src = src.substring(0, src.indexOf("?"));
+            }
+   
+            if (src.endsWith('music-xml-player.js'))
+            {
+               worker_path = src.slice(0, src.lastIndexOf('/'))+'/music-xml-player-worker.js';
+            }
+            else if (src.endsWith('music-xml-player.min.js'))
+            {
+               worker_path = src.slice(0, src.lastIndexOf('/'))+'/music-xml-player-worker.min.js';
+            }
          }
       }
 

@@ -755,14 +755,16 @@ class Synthetizer {
         var scripts = document.getElementsByTagName("script");
         for (var i = 0; i < scripts.length; i++) {
             var src = scripts[i].getAttribute('src');
-            if (src.indexOf("?") >= 0) {
-                src = src.substring(0, src.indexOf("?"));
-            }
-            if (src.endsWith('music-xml-player.js')) {
-                worker_path = src.slice(0, src.lastIndexOf('/')) + '/music-xml-player-worker.js';
-            }
-            else if (src.endsWith('music-xml-player.min.js')) {
-                worker_path = src.slice(0, src.lastIndexOf('/')) + '/music-xml-player-worker.min.js';
+            if (src) {
+                if (src.indexOf("?") >= 0) {
+                    src = src.substring(0, src.indexOf("?"));
+                }
+                if (src.endsWith('music-xml-player.js')) {
+                    worker_path = src.slice(0, src.lastIndexOf('/')) + '/music-xml-player-worker.js';
+                }
+                else if (src.endsWith('music-xml-player.min.js')) {
+                    worker_path = src.slice(0, src.lastIndexOf('/')) + '/music-xml-player-worker.min.js';
+                }
             }
         }
         /* Set internal data  */

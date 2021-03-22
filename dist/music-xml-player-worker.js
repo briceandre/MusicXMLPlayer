@@ -30,7 +30,8 @@ var postMessage = {
     promise: 1,
     result: {}
 };
-function ConvertFloat32ArrayToWASMBufferPtr(data, wasm_module) {
+function ConvertArrayBufferToWASMBufferPtr(d, wasm_module) {
+    var data = new Float32Array(d);
     var nDataBytes = data.length * data.BYTES_PER_ELEMENT;
     var dataPtr = wasm_module._malloc(nDataBytes);
     var dataHeap = new Uint8Array(wasm_module.HEAPU8.buffer, dataPtr, nDataBytes);
@@ -68,7 +69,7 @@ function initialise(_wasm_module) {
     /* Set handlers on messages received */
     self.onmessage = function (e) {
         if (e.data.type == 'load_note') {
-            var result = wasm_functions['load_note'](e.data.args[0], e.data.args[1], e.data.args[2], e.data.args[3], ConvertFloat32ArrayToWASMBufferPtr(e.data.args[4], wasm_module), ConvertFloat32ArrayToWASMBufferPtr(e.data.args[5], wasm_module));
+            var result = wasm_functions['load_note'](e.data.args[0], e.data.args[1], e.data.args[2], e.data.args[3], ConvertArrayBufferToWASMBufferPtr(e.data.args[4], wasm_module), ConvertArrayBufferToWASMBufferPtr(e.data.args[5], wasm_module));
             self.postMessage({ 'type': 'load_note',
                 'promise': e.data.promise,
                 'result': result });

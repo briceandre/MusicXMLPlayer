@@ -302,7 +302,19 @@ export class Synthetizer
                                'args': args});
    }
    
-   private load_note(instrument_id: number, note: string, sample_rate: number, length: number, channel_1_data: Float32Array, channel_2_data: Float32Array) {return this.invokeWorkerCommand('load_note', [instrument_id, note, sample_rate, length, channel_1_data, channel_2_data])}
+   private load_note(instrument_id: number, note: string, sample_rate: number, length: number, channel_1_data: ArrayBuffer, channel_2_data: ArrayBuffer)
+   {
+      return new Promise<number>(this.load_note_Promise.bind(this, instrument_id, note, sample_rate, length, channel_1_data, channel_2_data))
+   }
+   private load_note_Promise(instrument_id: number, note: string, sample_rate: number, length: number, channel_1_data: ArrayBuffer, channel_2_data: ArrayBuffer, resolve: (value: number) => void)
+   {
+      this.last_promise_id++;
+      this.promises[this.last_promise_id] = resolve;
+      this.worker.postMessage({'promise': this.last_promise_id,
+                               'type': 'load_note',
+                               'args': [instrument_id, note, sample_rate, length, channel_1_data, channel_2_data]},
+                              [channel_1_data, channel_2_data]);
+   }
 
    private AddReplayedInstrumentToWorker(instrument_id: number) {return this.invokeWorkerCommand('AddReplayedInstrument', [instrument_id])}
    private ClearAllToWorker() {return this.invokeWorkerCommand('ClearAll', [])}
@@ -459,10 +471,24 @@ export class Synthetizer
    
    private LoadNote(instrument: number, note: string, resolve: () => void, d: AudioBuffer)
    {
+      /* Extract data */
       var channel_1: Float32Array = d.getChannelData(0);
       var channel_2: Float32Array = d.getChannelData(1);
+      
+      /* Convert to ArrayBuffer */
+      var channel_1_buffer = new ArrayBuffer(4*channel_1.length);
+      var channel_2_buffer = new ArrayBuffer(4*channel_2.length);
+      
+      var channel_1_buffer_view = new Float32Array(channel_1_buffer);
+      var channel_2_buffer_view = new Float32Array(channel_2_buffer);
+      
+      for (var i = 0; i < channel_1.length; i++)
+      {
+         channel_1_buffer_view[i] = channel_1[i];
+         channel_2_buffer_view[i] = channel_2[i];
+      }
    
-      this.internal_load_note(instrument, this.note_parser.convert(note), d.sampleRate, channel_1, channel_2).then(resolve)
+      this.internal_load_note(instrument, this.note_parser.convert(note), d.sampleRate, channel_1.length, channel_1_buffer, channel_2_buffer).then(resolve)
    }
    private OnDecodeNote(b64_data: string,  instrument: number, note: string, resolve: () => void)
    {
@@ -473,9 +499,9 @@ export class Synthetizer
       return new Promise(this.OnDecodeNote.bind(this, b64_data, instrument, note));
    }
    
-   private internal_load_note(instrument_id: number, note: string, sample_rate: number, channel_1_data: Float32Array, channel_2_data: Float32Array)
+   private internal_load_note(instrument_id: number, note: string, sample_rate: number, nb_samples: number, channel_1_data: ArrayBuffer, channel_2_data: ArrayBuffer)
    {
-      return this.load_note(instrument_id, note, sample_rate, channel_1_data.length, channel_1_data, channel_2_data);
+      return this.load_note(instrument_id, note, sample_rate, nb_samples, channel_1_data, channel_2_data);
    }
    
    private SampleData(time: number)

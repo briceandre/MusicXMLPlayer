@@ -222,7 +222,14 @@ export class MusicXMLPlayer
 
    setReplayInstrument(voice_id: number, instrument_id: number): void
    {
-      //TODO
+      var notes_to_load = this.getNotes();
+      
+      var notes_of_instrument: {[index: number]:{[index: string]:boolean}} = {}
+      notes_of_instrument[instrument_id] = notes_to_load[parseInt(this.data['score-partwise'][0]['part-list']['score-part'][voice_id]['midi-instrument']['midi-program'])-1]
+      this.synth.loadInstruments([instrument_id], notes_of_instrument, function()
+      {
+         this.synth.SetReplayedInstrumentInstrument(this.selected_replayed_instruments[voice_id], instrument_id);
+      }.bind(this))
    }
    
    setReplayVolume(voice_id: number, volume: number): void

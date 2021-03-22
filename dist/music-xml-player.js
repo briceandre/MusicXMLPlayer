@@ -190,7 +190,12 @@ class MusicXMLPlayer {
             "Gunshot"];
     }
     setReplayInstrument(voice_id, instrument_id) {
-        //TODO
+        var notes_to_load = this.getNotes();
+        var notes_of_instrument = {};
+        notes_of_instrument[instrument_id] = notes_to_load[parseInt(this.data['score-partwise'][0]['part-list']['score-part'][voice_id]['midi-instrument']['midi-program']) - 1];
+        this.synth.loadInstruments([instrument_id], notes_of_instrument, function () {
+            this.synth.SetReplayedInstrumentInstrument(this.selected_replayed_instruments[voice_id], instrument_id);
+        }.bind(this));
     }
     setReplayVolume(voice_id, volume) {
         this.synth.SetReplayedInstrumentVolume(this.selected_replayed_instruments[voice_id], volume);
@@ -780,6 +785,7 @@ class Synthetizer {
         this.feeded = false;
         this.duration = 0.5;
         this.sample_base_url = sample_base_url;
+        this.loaded_notes = {};
         /* Set queue of promises under wait */
         this.last_promise_id = 0;
         this.promises = {};
@@ -832,6 +838,18 @@ class Synthetizer {
         /* Format urls */
         requirejs(instruments_url, this.OnLoadInstruments.bind(this, instruments_to_load, used_notes, callback));
     }
+    AppendNote(instrument, note) {
+        if (!this.loaded_notes.hasOwnProperty(instrument)) {
+            this.loaded_notes[instrument] = [];
+        }
+        if (this.loaded_notes[instrument].includes(note)) {
+            return false;
+        }
+        else {
+            this.loaded_notes[instrument].push(note);
+            return true;
+        }
+    }
     OnLoadInstruments(instruments_to_load, used_notes, callback) {
         var promises = [];
         window.MIDI = window.MIDI || {};
@@ -847,7 +865,9 @@ class Synthetizer {
             window.MIDI.parsed[this.midiInstrumentsNames[instrument]] = window.MIDI.parsed[this.midiInstrumentsNames[instrument]] || {};
             for (let note in window.MIDI.Soundfont[this.midiInstrumentsNames[instrument]]) {
                 if (filtered_notes.includes(this.note_parser.convert(note))) {
-                    promises.push(this.OnLoadNote(window.MIDI.Soundfont[this.midiInstrumentsNames[instrument]][note], instrument, note));
+                    if (this.AppendNote(instrument, note)) {
+                        promises.push(this.OnLoadNote(window.MIDI.Soundfont[this.midiInstrumentsNames[instrument]][note], instrument, note));
+                    }
                 }
             }
         }

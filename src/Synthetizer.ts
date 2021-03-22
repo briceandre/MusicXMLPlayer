@@ -28,6 +28,8 @@ export class Synthetizer
    private last_promise_id: number;
    private promises:{[index: number]:(value: number) => void};
    
+   private loaded_notes:{[index: number]:string[]};
+   
    private worker: any;
    
    private onLoadPromise: any;
@@ -78,6 +80,8 @@ export class Synthetizer
       this.duration = 0.5;
       
       this.sample_base_url = sample_base_url;
+
+      this.loaded_notes = {};
 
       /* Set queue of promises under wait */
       this.last_promise_id = 0;
@@ -151,6 +155,23 @@ export class Synthetizer
       requirejs(instruments_url, this.OnLoadInstruments.bind(this, instruments_to_load, used_notes, callback));
    }
    
+   private AppendNote(instrument: number, note: string)
+   {
+      if (!this.loaded_notes.hasOwnProperty(instrument))
+      {
+         this.loaded_notes[instrument] = [];
+      }
+      if (this.loaded_notes[instrument].includes(note))
+      {
+         return false;
+      }
+      else
+      {
+         this.loaded_notes[instrument].push(note);
+         return true;
+      }
+   }
+   
    private OnLoadInstruments(instruments_to_load: number[], used_notes: {[index: number]:{[index: string]:boolean}}, callback: () => void) 
    {
       var promises = [];
@@ -175,7 +196,10 @@ export class Synthetizer
          {
             if (filtered_notes.includes(this.note_parser.convert(note)))
             {
-               promises.push(this.OnLoadNote(window.MIDI.Soundfont[this.midiInstrumentsNames[instrument]][note], instrument, note))
+               if (this.AppendNote(instrument, note))
+               {
+                  promises.push(this.OnLoadNote(window.MIDI.Soundfont[this.midiInstrumentsNames[instrument]][note], instrument, note))
+               }
             }
          }
       }

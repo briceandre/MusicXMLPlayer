@@ -22,7 +22,6 @@ return /******/ (() => { // webpackBootstrap
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MusicXMLPlayer = void 0;
 const Synthetizer_ts_1 = __webpack_require__(/*! ./Synthetizer.ts */ "./src/Synthetizer.ts");
-console.log('loading MusicXMLPlayer');
 class MusicXMLPlayer {
     constructor(mxl, sample_base_url = "https://gleitz.github.io/midi-js-soundfonts/MusyngKite/") {
         this.synth = new Synthetizer_ts_1.Synthetizer(sample_base_url);
@@ -194,7 +193,7 @@ class MusicXMLPlayer {
         //TODO
     }
     setReplayVolume(voice_id, volume) {
-        //TODO
+        this.synth.SetReplayedInstrumentVolume(this.selected_replayed_instruments[voice_id], volume);
     }
     loadInstruments(instruments, callback) {
         /* Extract notes needed */

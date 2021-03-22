@@ -6,7 +6,6 @@ declare class JSZip
   loadAsync(arg: string): any;
 }
 
-console.log('loading MusicXMLPlayer')
 export class MusicXMLPlayer
 {
    private synth: Synthetizer;
@@ -228,7 +227,7 @@ export class MusicXMLPlayer
    
    setReplayVolume(voice_id: number, volume: number): void
    {
-      //TODO
+      this.synth.SetReplayedInstrumentVolume(this.selected_replayed_instruments[voice_id], volume);
    }
    
    private loadInstruments(instruments: number[], callback: () => void): void

@@ -82,7 +82,7 @@ class PlayedNote
       PlayedNote()
       {}
 
-      bool SampleData(std::vector<float>& data, Note* note)
+      bool SampleData(std::vector<float>& data, Note* note, float volume)
       {
          /* Compute effective length */
          int length = data.size() / 2;
@@ -99,8 +99,8 @@ class PlayedNote
             /* Apply it */
             for (int i = from; i < to; i++)
             {
-               data[i] += note->GetLeft(value.play_index)*value.volume;
-               data[length+i] += note->GetRight(value.play_index)*value.volume;
+               data[i] += note->GetLeft(value.play_index)*value.volume*volume;
+               data[length+i] += note->GetRight(value.play_index)*value.volume*volume;
 
                value.play_index++;
             }
@@ -194,7 +194,7 @@ class ReplayedInstrument
 
          for (auto kv : played_notes)
          {
-            if (kv.second.SampleData(data, instrument->GetNote(kv.first)))
+            if (kv.second.SampleData(data, instrument->GetNote(kv.first), this->volume))
             {
                to_suppress.push_back(kv.first);
             }

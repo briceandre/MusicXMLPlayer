@@ -14,13 +14,25 @@ var postMessage = {
 };
 export type PostMessage = typeof postMessage;
 
-function convert(data: Float32Array, wasm_module: any)
+function ConvertFloat32ArrayToWASMBufferPtr(data: Float32Array, wasm_module: any)
 {
    var nDataBytes = data.length * data.BYTES_PER_ELEMENT;
    var dataPtr = wasm_module._malloc(nDataBytes);
    var dataHeap = new Uint8Array(wasm_module.HEAPU8.buffer, dataPtr, nDataBytes);
    dataHeap.set(new Uint8Array(data.buffer));
    return dataHeap.byteOffset;
+}
+
+function ConvertWASMBufferPtrToArrayBuffer(wasm_module: any, buffer: any, nb_samples: number)
+{
+   var data = new Float32Array(wasm_module.HEAP32.buffer, buffer, nb_samples);
+   var result = new ArrayBuffer(nb_samples*4);
+   var view = new Float32Array(result);
+   for (var i = 0; i < nb_samples; i++)
+   {
+      view[i] = data[i]
+   }
+   return result;
 }
 
 function initialise(_wasm_module: any)
@@ -61,8 +73,8 @@ function initialise(_wasm_module: any)
                                                   e.data.args[1],
                                                   e.data.args[2],
                                                   e.data.args[3],
-                                                  convert(e.data.args[4], wasm_module),
-                                                  convert(e.data.args[5], wasm_module));
+                                                  ConvertFloat32ArrayToWASMBufferPtr(e.data.args[4], wasm_module),
+                                                  ConvertFloat32ArrayToWASMBufferPtr(e.data.args[5], wasm_module));
          self.postMessage({'type': 'load_note',
                            'promise': e.data.promise,
                            'result': result});
@@ -76,12 +88,14 @@ function initialise(_wasm_module: any)
          var buffer = wasm_functions['SampleData'](nb_samples);
          
          /* Retrieve array */
-         var result: any = [new Float32Array(wasm_module.HEAP32.buffer, buffer, nb_samples),
-                            new Float32Array(wasm_module.HEAP32.buffer, buffer+(4*nb_samples), nb_samples)];
+         var buffer_1 = ConvertWASMBufferPtrToArrayBuffer(wasm_module, buffer, nb_samples);
+         var buffer_2 = ConvertWASMBufferPtrToArrayBuffer(wasm_module, buffer+(4*nb_samples), nb_samples)
          
+         /* Send data to main thread */
          self.postMessage({'type': 'SampleData',
-            'promise': e.data.promise,
-            'result': result});
+                           'promise': e.data.promise,
+                           'result': [buffer_1, buffer_2]},
+                          [buffer_1, buffer_2]);
       }
       else if (wasm_functions.hasOwnProperty(e.data.type))
       {

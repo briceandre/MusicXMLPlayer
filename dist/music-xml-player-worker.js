@@ -30,12 +30,21 @@ var postMessage = {
     promise: 1,
     result: {}
 };
-function convert(data, wasm_module) {
+function ConvertFloat32ArrayToWASMBufferPtr(data, wasm_module) {
     var nDataBytes = data.length * data.BYTES_PER_ELEMENT;
     var dataPtr = wasm_module._malloc(nDataBytes);
     var dataHeap = new Uint8Array(wasm_module.HEAPU8.buffer, dataPtr, nDataBytes);
     dataHeap.set(new Uint8Array(data.buffer));
     return dataHeap.byteOffset;
+}
+function ConvertWASMBufferPtrToArrayBuffer(wasm_module, buffer, nb_samples) {
+    var data = new Float32Array(wasm_module.HEAP32.buffer, buffer, nb_samples);
+    var result = new ArrayBuffer(nb_samples * 4);
+    var view = new Float32Array(result);
+    for (var i = 0; i < nb_samples; i++) {
+        view[i] = data[i];
+    }
+    return result;
 }
 function initialise(_wasm_module) {
     /* Save var */
@@ -59,7 +68,7 @@ function initialise(_wasm_module) {
     /* Set handlers on messages received */
     self.onmessage = function (e) {
         if (e.data.type == 'load_note') {
-            var result = wasm_functions['load_note'](e.data.args[0], e.data.args[1], e.data.args[2], e.data.args[3], convert(e.data.args[4], wasm_module), convert(e.data.args[5], wasm_module));
+            var result = wasm_functions['load_note'](e.data.args[0], e.data.args[1], e.data.args[2], e.data.args[3], ConvertFloat32ArrayToWASMBufferPtr(e.data.args[4], wasm_module), ConvertFloat32ArrayToWASMBufferPtr(e.data.args[5], wasm_module));
             self.postMessage({ 'type': 'load_note',
                 'promise': e.data.promise,
                 'result': result });
@@ -70,11 +79,12 @@ function initialise(_wasm_module) {
             /* Perform the call */
             var buffer = wasm_functions['SampleData'](nb_samples);
             /* Retrieve array */
-            var result = [new Float32Array(wasm_module.HEAP32.buffer, buffer, nb_samples),
-                new Float32Array(wasm_module.HEAP32.buffer, buffer + (4 * nb_samples), nb_samples)];
+            var buffer_1 = ConvertWASMBufferPtrToArrayBuffer(wasm_module, buffer, nb_samples);
+            var buffer_2 = ConvertWASMBufferPtrToArrayBuffer(wasm_module, buffer + (4 * nb_samples), nb_samples);
+            /* Send data to main thread */
             self.postMessage({ 'type': 'SampleData',
                 'promise': e.data.promise,
-                'result': result });
+                'result': [buffer_1, buffer_2] }, [buffer_1, buffer_2]);
         }
         else if (wasm_functions.hasOwnProperty(e.data.type)) {
             var result = wasm_functions[e.data.type].apply(self, e.data.args);
@@ -108,7 +118,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 
 var SynthetiserModule = (function() {
-  var _scriptDir = "file:///C:/Users/Brice/Documents/Sound/MusicXMLPlayer/worker/SynthetiserModule.js";
+  var _scriptDir = "file:///C:/Users/bandre/Documents/Sound/MusicXMLPlayer/worker/SynthetiserModule.js";
   
   return (
 function(SynthetiserModule) {

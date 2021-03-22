@@ -44,9 +44,9 @@ export class Synthetizer
          var src = scripts[i].getAttribute('src');
          if (src.indexOf("?") >= 0)
          {
-            src = src.substring(0, src.indexOf("?")-1);
+            src = src.substring(0, src.indexOf("?"));
          }
-         
+
          if (src.endsWith('music-xml-player.js'))
          {
             worker_path = src.slice(0, src.lastIndexOf('/'))+'/music-xml-player-worker.js';
@@ -489,6 +489,11 @@ export class Synthetizer
    
    private SendDataToSoundCard(data: [Float32Array,Float32Array]): void
    {
+      /* Convert data from ArrayBuffer to Float32Array */
+      var data_buffer_1 = new Float32Array(data[0]);
+      var data_buffer_2 = new Float32Array(data[1]);
+
+      /* Create the audio buffer */
       var buffer = this.context.createBuffer(2, this.duration*this.context.sampleRate, this.context.sampleRate);
       
       this.shall_feed = true;
@@ -499,8 +504,8 @@ export class Synthetizer
       
       for (var i = 0; i < buffer.length; i++)
       {
-         b1[i] = data[0][i];
-         b2[i] = data[1][i];
+         b1[i] = data_buffer_1[i];
+         b2[i] = data_buffer_2[i];
       }
       
       /* Send it to sound card */
